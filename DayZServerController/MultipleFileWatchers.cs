@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace DayZServerController
 {
-    internal class MultipleFileWatchers
+    public class MultipleFileWatchers
     {
         private List<string> _directoriesToWatch = new List<string>();
         private List<string> _changedDirectories = new List<string>();

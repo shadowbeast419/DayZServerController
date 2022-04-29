@@ -7,11 +7,12 @@ using System.Threading.Tasks;
 
 namespace DayZServerController
 {
-    internal class DirectoryCopyWorker
+    internal class DirectoryCopyWorker : IDisposable
     {
         private string _sourceDir;
         private string _destinationDir;
         private bool _copyingFinished = false;
+        private RoboCommand _roboCmd;
 
         public bool DirectoriesValid { get; } = false;
 
@@ -28,6 +29,8 @@ namespace DayZServerController
             _destinationDir = destination;
 
             DirectoriesValid = true;
+
+            _roboCmd = new RoboCommand();
         }
 
         public async Task CopyDirectory()
@@ -38,23 +41,21 @@ namespace DayZServerController
                 return;
             }
 
-            RoboCommand roboCmd = new RoboCommand();
-
             // events
-            roboCmd.OnCommandCompleted += RoboCmd_OnCommandCompleted;
+            _roboCmd.OnCommandCompleted += RoboCmd_OnCommandCompleted;
 
             // copy options
-            roboCmd.CopyOptions.Source = _sourceDir;
-            roboCmd.CopyOptions.Destination = _destinationDir;
-            roboCmd.CopyOptions.UseUnbufferedIo = true;
-            roboCmd.CopyOptions.Mirror = true;
+            _roboCmd.CopyOptions.Source = _sourceDir;
+            _roboCmd.CopyOptions.Destination = _destinationDir;
+            _roboCmd.CopyOptions.UseUnbufferedIo = true;
+            _roboCmd.CopyOptions.Mirror = true;
 
             // retry options
-            roboCmd.RetryOptions.RetryCount = 1;
-            roboCmd.RetryOptions.RetryWaitTime = 2;
+            _roboCmd.RetryOptions.RetryCount = 1;
+            _roboCmd.RetryOptions.RetryWaitTime = 2;
 
             Console.WriteLine($"Robocopy: Copying content of directory {_sourceDir} to {_destinationDir}...");
-            await roboCmd.Start();
+            await _roboCmd.Start();
             
             while(!_copyingFinished)
             {
@@ -67,8 +68,19 @@ namespace DayZServerController
 
         private void RoboCmd_OnCommandCompleted(object sender, RoboCommandCompletedEventArgs e)
         {
+            if (!e.Results.Status.Successful)
+            {
+                Console.WriteLine($"Robocopy: Error copying files. ({String.Join('\n', e.Results.LogLines)})");
+            }
+
             Console.WriteLine($"Robocopy: Copying directory complete! (Copied files: {e.Results.FilesStatistic.Copied}");
             _copyingFinished = true;
+        }
+
+        public void Dispose()
+        {
+            _roboCmd.OnCommandCompleted -= RoboCmd_OnCommandCompleted;
+            _roboCmd?.Dispose();
         }
     }
 }

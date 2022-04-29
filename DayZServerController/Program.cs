@@ -155,7 +155,7 @@ try
         if (checkForMods)
         {
             checkForMods = false;
-            int modsToUpdate = await modCopyHelper.CheckForUpdatesAsync();
+            int modsToUpdate = await modCopyHelper.DownloadModUpdatesViaSteamServerAsync();
 
             if (modsToUpdate == 0)
             {
@@ -250,7 +250,7 @@ void ModUpdateTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
 
 async Task CheckForModsAndUpdate()
 {
-    int modsToUpdate = await modCopyHelper.CheckForUpdatesAsync();
+    int modsToUpdate = await modCopyHelper.DownloadModUpdatesViaSteamServerAsync();
 
     if (modsToUpdate > 0)
     {

@@ -1,0 +1,11 @@
+﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=0877cc5c_002Dd3a4_002D41bf_002D91b8_002Df72c654f65dd/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="CheckIfChangesGetNoticed" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;TestAncestor&gt;&#xD;
+    &lt;TestId&gt;NUnit3x::53116612-DE25-4B93-8324-33EAAFCD7BC8::net6.0::DayZServerControllerUnitTests.FileWatcherUnitTests.CheckIfChangesGetNoticed&lt;/TestId&gt;&#xD;
+  &lt;/TestAncestor&gt;&#xD;
+&lt;/SessionState&gt;</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=1adcb3ce_002D76cc_002D424e_002Da2c0_002D7de4dbeb7cbd/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="CheckIfChangesGetNoticed #2" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
+  &lt;TestAncestor&gt;&#xD;
+    &lt;TestId&gt;NUnit3x::53116612-DE25-4B93-8324-33EAAFCD7BC8::net6.0::DayZServerControllerUnitTests.FileWatcherUnitTests.CheckIfChangesGetNoticed&lt;/TestId&gt;&#xD;
+  &lt;/TestAncestor&gt;&#xD;
+&lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>

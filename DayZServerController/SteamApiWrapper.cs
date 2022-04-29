@@ -18,6 +18,13 @@ namespace DayZServerController
         private bool _isInitialized = false;
         private Credential _steamCredentials;
 
+        private List<string> _cliArguments = new List<string>();
+        private readonly string _steamGuardCode = "PH8MY";
+        private List<string> _defaultCliStartArguments = new List<string>();
+        private List<string> _defaultCliEndArguments = new List<string>();
+
+        public int ModUpdateTasksCount { get; private set; } = 0;
+
         public SteamApiWrapper(string steamApiPath)
         {
             if (String.IsNullOrEmpty(steamApiPath))
@@ -50,25 +57,53 @@ namespace DayZServerController
                 _steamCredentials = PasswordRepository.GetPassword(_credentialsName);
             }
 
+            _defaultCliStartArguments.Clear();
+
+            // Add the default login command to the cli arguments
+            _defaultCliStartArguments.Add($"+login");
+            _defaultCliStartArguments.Add(_steamCredentials.Username);
+            _defaultCliStartArguments.Add(_steamCredentials.Password);
+            _defaultCliStartArguments.Add($"+set_steam_guard_code {_steamGuardCode}");
+
+            _defaultCliEndArguments.Add("+quit");
+
             _isInitialized = true;
 
             return true;
         }
 
-        public Task<int> UpdateWorkshopItem(string gameID, string modID)
+        public void AddUpdateWorkshopItemTask(string gameID, string modID)
         {
-            List<string> cliArguments = new List<string>();
-            cliArguments.Add("+login");
-            cliArguments.Add(_steamCredentials.Username);
-            cliArguments.Add(_steamCredentials.Password);
-            cliArguments.Add($"+set_steam_guard_code 68F5M");
-            cliArguments.Add("\"+workshop_download_item");
-            cliArguments.Add(gameID);
-            cliArguments.Add($"{modID}\"");
-            cliArguments.Add("validate");
-            cliArguments.Add("+quit");
+            if (!_isInitialized)
+                return;
 
-            return ProcessHelper.Start(_steamApiPath, cliArguments);
+            if (String.IsNullOrEmpty(gameID) || string.IsNullOrEmpty(modID))
+                throw new ArgumentException("SteamApiWrapper: GameID or ModID is invalid.");
+
+            _cliArguments.Add("\"+workshop_download_item");
+            _cliArguments.Add(gameID);
+            _cliArguments.Add($"{modID}\"");
+
+            ModUpdateTasksCount++;
+        }
+
+        public Task<int> ExecuteSteamCMDWithArguments()
+        {
+            // Return dummy task if SteamCMD hasn't been initialized
+            if (!_isInitialized)
+                return new Task<int>(() => { return 0; });
+
+            // Insert first and last arguments which are always the same
+            _cliArguments.InsertRange(0, _defaultCliStartArguments);
+            _cliArguments.InsertRange(_cliArguments.Count, _defaultCliEndArguments);
+
+            return ProcessHelper.Start(_steamApiPath, _cliArguments);
+        }
+
+        public void ResetUpdateTaskList()
+        {
+            _cliArguments.Clear();
+            ModUpdateTasksCount = 0;
         }
     }
 }

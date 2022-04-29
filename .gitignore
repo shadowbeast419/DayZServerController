@@ -3,3 +3,7 @@
 ################################################################################
 
 /DayZServerController/bin/Debug/net6.0
+/DayZServerController/obj
+/.vs/DayZServerController
+/DayZServerControllerUnitTests
+/packages

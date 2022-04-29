@@ -52,6 +52,11 @@ namespace DayZServerController
             _steamApiWrapper = steamApiWrapper;
         }
 
+        /// <summary>
+        /// Syncs Steam-Workshop-Mod-Folder with DayZServer-Mod-Folder
+        /// and inits the FileWatchers
+        /// </summary>
+        /// <returns></returns>
         public async Task InitWatchingAsync()
         {
             Console.WriteLine("Fetching Mods from Modlist...");
@@ -61,7 +66,6 @@ namespace DayZServerController
             _observedModDirDict = new Dictionary<string, string>();
 
             // Check for inconsistencies before the update
-
             IEnumerable<string> allModDirectories = Directory.GetDirectories(_modSourceFolder).Select(x => new DirectoryInfo(x).Name);
 
             // Check if all Mods from the Modlist are present inside the Mod Directory
@@ -79,37 +83,65 @@ namespace DayZServerController
                 }
             }
 
-            // Check for inconsistencies before an update via SteamAPI
+            List<Tuple<string, string>> sourceDestFolderMap = new List<Tuple<string, string>>();
+
             foreach (var modServerDirPair in _observedModDirDict)
             {
                 string destinationPath = Path.Combine(_modDestinationFolder, modServerDirPair.Value);
-
-                if (!MultipleFileWatchers.CheckIfDirectoryContentsAreEqual(modServerDirPair.Key, destinationPath))
-                {
-                    // Copy the content of the updated mod to the server mod folder
-                    Console.WriteLine($"Mod {new DirectoryInfo(modServerDirPair.Value).Name} has a different file! Starting to copy to server mod folder.");
-
-                    DirectoryCopyWorker copyWorker = new DirectoryCopyWorker(modServerDirPair.Key, destinationPath);
-                    await copyWorker.CopyDirectory();
-                }
+                sourceDestFolderMap.Add(new Tuple<string, string>(modServerDirPair.Key, destinationPath));
             }
+
+            // Check for inconsistencies before an update via SteamAPI
+            await SyncWorkshopWithServerModsAsync(sourceDestFolderMap);
 
             _modFileWatchers = new MultipleFileWatchers(_observedModDirDict.Keys);
         }
 
-        public async Task<int> CheckForUpdatesAsync()
+        /// <summary>
+        /// Syncs Mod Folder contents locally
+        /// </summary>
+        /// <param name="sourceDestFolderMap"></param>
+        /// <returns></returns>
+        private async Task SyncWorkshopWithServerModsAsync(IEnumerable<Tuple<string,string>> sourceDestFolderMap)
+        {
+            foreach (var sourceDestTuple in sourceDestFolderMap)
+            {
+                if (!MultipleFileWatchers.CheckIfDirectoryContentsAreEqual(sourceDestTuple.Item1, sourceDestTuple.Item2))
+                {
+                    // Copy the content of the updated mod to the server mod folder
+                    Console.WriteLine($"Mod {new DirectoryInfo(sourceDestTuple.Item2).Name} has a different file! " +
+                                      $"Starting to copy to server mod folder.");
+
+                    using (var copyWorker = new DirectoryCopyWorker(sourceDestTuple.Item1, sourceDestTuple.Item2))
+                    {
+                        await copyWorker.CopyDirectory();
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Function calls SteamCMD which checks for updates of all mods, FileWatchers detect changes
+        /// </summary>
+        /// <returns></returns>
+        public async Task<int> DownloadModUpdatesViaSteamServerAsync()
         {
             _modsToCopy.Clear();
 
             // Start observering all necessary mod folders
             _modFileWatchers.StartWatching();
 
+            _steamApiWrapper.ResetUpdateTaskList();
+
             foreach (var modKeyValuePair in _modMappingDict)
             {
-                Console.WriteLine($"Checking for updates of Mod {modKeyValuePair.Value}...");
-                int taskNo = await _steamApiWrapper.UpdateWorkshopItem(DayZGameID.ToString(), modKeyValuePair.Key.ToString());
-                Console.WriteLine($"Closed SteamAPI-process {taskNo}.");
+                Console.WriteLine($"Adding task for checking for updates of Mod {modKeyValuePair.Value}...");
+                 _steamApiWrapper.AddUpdateWorkshopItemTask(DayZGameID.ToString(), modKeyValuePair.Key.ToString());
             }
+
+            Console.WriteLine($"Executing steamCMD-process with {_steamApiWrapper.ModUpdateTasksCount} ModUpdate-Tasks...");
+            int taskNo = await _steamApiWrapper.ExecuteSteamCMDWithArguments();
+            Console.WriteLine($"Closed SteamAPI-process {taskNo}.");
 
             List<string> changedModList = _modFileWatchers.EndWatching();
 
@@ -138,8 +170,11 @@ namespace DayZServerController
 
                 try
                 {
-                    DirectoryCopyWorker copyWorker = new DirectoryCopyWorker(pathOfUpdatedMod, serverModPath);
-                    await copyWorker.CopyDirectory();
+                    using (var copyWorker = new DirectoryCopyWorker(pathOfUpdatedMod, serverModPath))
+                    {
+                        await copyWorker.CopyDirectory();
+                    }
+
                     modsCopiedSuccessfully.Add(changedModDir);
 
                     if(_modsToCopy.Contains(pathOfUpdatedMod))
