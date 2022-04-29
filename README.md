@@ -1,4 +1,4 @@
-# DayZServerController
+# DayZServerController .NET
  A handy .NET tool for every DayZ-Server owner
 
 Features:
