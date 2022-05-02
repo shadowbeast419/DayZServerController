@@ -17,7 +17,6 @@ namespace DayZServerController
 
         public int ServerPort { get; set; } = 2302;
         public string ServerConfig { get; set; } = "serverDZ.cfg";
-        public int ServerCPUCount { get; set; } = 2;
         public string ProfileFolderName { get; set; } = "Profiles";
 
         public bool IsRunning

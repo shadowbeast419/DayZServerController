@@ -17,6 +17,8 @@ namespace DayZServerController
         private readonly string _discordDataFilePath = 
             @"C:\Users\tacticalbacon\Documents\Github\DayZServerController\token.txt";
 
+        public bool Mute { get; set; } = false;
+
         public DiscordBot()
         {
             _client = new DiscordSocketClient();
@@ -55,7 +57,7 @@ namespace DayZServerController
 
         public async Task Announce(string message)
         {
-            if (!_isInit)
+            if (!_isInit || Mute)
                 return;
 
             var channel = await _client.GetChannelAsync(_channelID) as IMessageChannel;

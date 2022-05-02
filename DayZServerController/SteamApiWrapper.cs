@@ -10,10 +10,9 @@ namespace DayZServerController
 {
     internal class SteamApiWrapper
     {
+        public static readonly string DayZServerGameID = "223350";
 
-        public readonly int DayZGameID = 221100;
-
-        private string _steamApiPath;
+        private FileInfo _steamApiPath;
         private string _credentialsName = "SteamCredentials2";
         private bool _isInitialized = false;
         private Credential _steamCredentials;
@@ -25,13 +24,10 @@ namespace DayZServerController
 
         public int ModUpdateTasksCount { get; private set; } = 0;
 
-        public SteamApiWrapper(string steamApiPath)
+        public SteamApiWrapper(FileInfo steamApiPath)
         {
-            if (String.IsNullOrEmpty(steamApiPath))
-                throw new ArgumentNullException($"SteamApi-Path is null or empty!");
-
-            if (!File.Exists(steamApiPath))
-                throw new ArgumentException($"SteamApi not found {steamApiPath}!");
+            if (!steamApiPath.Exists)
+                throw new ArgumentNullException($"SteamApi-Path is not valid!");
 
             _steamApiPath = steamApiPath;
         }
@@ -63,13 +59,33 @@ namespace DayZServerController
             _defaultCliStartArguments.Add($"+login");
             _defaultCliStartArguments.Add(_steamCredentials.Username);
             _defaultCliStartArguments.Add(_steamCredentials.Password);
-            _defaultCliStartArguments.Add($"+set_steam_guard_code {_steamGuardCode}");
+            // _defaultCliStartArguments.Add($"+set_steam_guard_code {_steamGuardCode}");
 
             _defaultCliEndArguments.Add("+quit");
 
             _isInitialized = true;
 
             return true;
+        }
+
+        public async Task UpdateDayZServer()
+        {
+            ResetUpdateTaskList();
+            AddUpdateGameTask(DayZServerGameID);
+
+            await ExecuteSteamCMDWithArguments();
+        }
+
+        private void AddUpdateGameTask(string gameID)
+        {
+            if (!_isInitialized)
+                return;
+
+            if (String.IsNullOrEmpty(gameID))
+                throw new ArgumentException("SteamApiWrapper: GameID is invalid.");
+
+            _cliArguments.Add($"\"+app_update");
+            _cliArguments.Add($"{gameID}\"");
         }
 
         public void AddUpdateWorkshopItemTask(string gameID, string modID)
@@ -97,7 +113,7 @@ namespace DayZServerController
             _cliArguments.InsertRange(0, _defaultCliStartArguments);
             _cliArguments.InsertRange(_cliArguments.Count, _defaultCliEndArguments);
 
-            return ProcessHelper.Start(_steamApiPath, _cliArguments);
+            return ProcessHelper.Start(_steamApiPath.FullName, _cliArguments);
         }
 
         public void ResetUpdateTaskList()

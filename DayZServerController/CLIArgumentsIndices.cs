@@ -12,6 +12,6 @@ namespace DayZServerController
         ModlistPath = 1,
         DayZServerExecPath = 2,
         RestartPeriod = 3,
-        ModsFolder = 4
+        WorkshopFolder = 4
     };
 }

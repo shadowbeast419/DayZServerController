@@ -8,24 +8,25 @@ namespace DayZServerController
 {
     internal class ModlistReader
     {
-        private string _modlistPath;
+        private FileInfo _modlistInfo;
 
-        public ModlistReader(string modlistPath)
+        public ModlistReader(FileInfo modlistInfo)
         {
-            if (String.IsNullOrEmpty(modlistPath))
-                throw new ArgumentNullException($"Modlist-Path is null or empty!");
+            if (!modlistInfo.Exists)
+                throw new ArgumentException($"Modlist not found {modlistInfo}!");
 
-            if (!File.Exists(modlistPath))
-                throw new ArgumentException($"Modlist not found {modlistPath}!");
-
-            _modlistPath = modlistPath;
+            _modlistInfo = modlistInfo;
         }
 
+        /// <summary>
+        /// Gets the IDs and Trivial ModNames from the Modlist
+        /// </summary>
+        /// <returns></returns>
         public async Task<Dictionary<long, string>> GetModsFromFile()
         {
             Dictionary<long, string> modDict = new Dictionary<long, string>();
 
-            using(StreamReader sr = new StreamReader(_modlistPath))
+            using(StreamReader sr = new StreamReader(_modlistInfo.FullName))
             {
                 while(!sr.EndOfStream)
                 {

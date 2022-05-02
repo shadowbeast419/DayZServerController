@@ -10,8 +10,8 @@ using System.Diagnostics;
 
 // -------------- Checking CLI Arguments ---------------------------------------
 
-bool skipModCheckAtStartup = false;
-bool muteDiscordBot = false;
+bool checkModsAtStartup = false;
+bool muteDiscordBot = true;
 
 if (args.Length != Enum.GetNames(typeof(CLIArgumentsIndices)).Length)
 {
@@ -23,16 +23,20 @@ if (args.Length != Enum.GetNames(typeof(CLIArgumentsIndices)).Length)
 }
 
 SteamApiWrapper steamApiWrapper;
-ModCopyHelper modCopyHelper;
+ModManager modManager;
 DayZServerHelper dayZServerHelper;
-DiscordBot discordBot = new DiscordBot();
+DiscordBot discordBot = new DiscordBot()
+{
+    Mute = muteDiscordBot
+};
 
 try
 {
-    steamApiWrapper = new SteamApiWrapper(args[(int)CLIArgumentsIndices.SteamApiPath]);
+    steamApiWrapper = new SteamApiWrapper(new FileInfo(args[(int)CLIArgumentsIndices.SteamApiPath]));
 
-    modCopyHelper = new ModCopyHelper(args[(int)CLIArgumentsIndices.ModsFolder], args[(int)CLIArgumentsIndices.DayZServerExecPath],
-        new ModlistReader(args[(int)CLIArgumentsIndices.ModlistPath]),
+    modManager = new ModManager(new DirectoryInfo(args[(int)CLIArgumentsIndices.WorkshopFolder]), 
+        new FileInfo(args[(int)CLIArgumentsIndices.DayZServerExecPath]),
+        new ModlistReader(new FileInfo(args[(int)CLIArgumentsIndices.ModlistPath])),
         steamApiWrapper);
 
     dayZServerHelper = new DayZServerHelper(args[(int)CLIArgumentsIndices.DayZServerExecPath], 
@@ -76,15 +80,9 @@ if (!steamApiWrapper.Init())
     }
 }
 
-bool serverWasAlreadyRunning = dayZServerHelper.IsRunning;
+await discordBot.Init();
 
-if(!muteDiscordBot)
-{
-    await discordBot.Init();
-    // await discordBot.Announce($"Hello, ServerBot is now ready for tasks! (DayZController (tm) started)");
-}
-
-if (serverWasAlreadyRunning)
+if (dayZServerHelper.IsRunning)
 {
     Console.Write("Server is already running: Do you want to restart the process? (y/n)");
     
@@ -95,16 +93,7 @@ if (serverWasAlreadyRunning)
     {
         // Server is already running at startup of this exec -> stop it and restart with fitting restart interval
         dayZServerHelper.StopServer();
-        await Task.Delay(5000);
-
-        await modCopyHelper.InitWatchingAsync();
-        await CheckForModsAndUpdate();
-
-        // Start restart timer and server
-        dayZServerHelper.StartServer(modCopyHelper.ModDestinationFolders);
-
-        dayZServerHelper.RestartTimerElapsed += DayZServerHelper_RestartTimerElapsed;
-        dayZServerHelper.StartRestartTimer();
+        await Task.Delay(TimeSpan.FromSeconds(20));
     }
     else
     {
@@ -113,34 +102,45 @@ if (serverWasAlreadyRunning)
         return 1;
     }
 }
-else
+
+// Get data from the Modlist file
+await modManager.UpdateModDirsFromModlistAsync();
+
+// Update DayZ Server via SteamCMD (if update is available)
+Console.WriteLine($"Checking for DayZServer Updates...");
+await steamApiWrapper.UpdateDayZServer();
+
+await modManager.SyncWorkshopWithServerModsAsync();
+
+if (!checkModsAtStartup)
 {
-    await modCopyHelper.InitWatchingAsync();
+    Console.WriteLine($"Checking for Mod Updates...");
+    int modsUpdated = await modManager.DownloadModUpdatesViaSteamAsync();
 
-    if (!skipModCheckAtStartup)
+    if (modsUpdated > 0)
     {
-        await CheckForModsAndUpdate();
-    }
+        Console.WriteLine($"{modsUpdated} updated Mod(s) found!");
 
-    // Start restart timer and server
-    dayZServerHelper.StartServer(modCopyHelper.ModDestinationFolders);
-
-    dayZServerHelper.RestartTimerElapsed += DayZServerHelper_RestartTimerElapsed;
-    dayZServerHelper.StartRestartTimer();
-
-    if(!muteDiscordBot)
-    {
-        await discordBot.Announce($"Server started! Next restart scheduled at " +
-    $"{(dayZServerHelper.TimeOfNextRestart.HasValue ? dayZServerHelper.TimeOfNextRestart.Value.ToLongTimeString() : String.Empty)}");
+        await modManager.SyncWorkshopWithServerModsAsync();
+        await discordBot.Announce($"{modsUpdated} Mod(s) updated.");
     }
 }
 
-bool serverNeedsRestart = false;
-bool checkForMods = false;
+// Start restart timer and server
+dayZServerHelper.StartServer(modManager.ServerFolderModDirectoryNames);
+
+dayZServerHelper.RestartTimerElapsed += DayZServerHelper_RestartTimerElapsed;
+dayZServerHelper.StartRestartTimer();
+
+await discordBot.Announce($"Server started! Next restart scheduled at " +
+    $"{(dayZServerHelper.TimeOfNextRestart.HasValue ? dayZServerHelper.TimeOfNextRestart.Value.ToLongTimeString() : String.Empty)}");
+
+bool restartTimerElapsed = false;
+bool modCheckTimerElapsed = false;
 
 System.Timers.Timer modUpdateTimer = new System.Timers.Timer()
 {
-    Interval = 1800 * 1000,
+    Interval = TimeSpan.FromMinutes(30).TotalMilliseconds,
     AutoReset = true
 };
 
@@ -152,10 +152,10 @@ try
     // -------------- Main Loop ----------------------------------------------------------------------
     while (true)
     {
-        if (checkForMods)
+        if (modCheckTimerElapsed)
         {
-            checkForMods = false;
-            int modsToUpdate = await modCopyHelper.DownloadModUpdatesViaSteamServerAsync();
+            modCheckTimerElapsed = false;
+            int modsToUpdate = await modManager.DownloadModUpdatesViaSteamAsync();
 
             if (modsToUpdate == 0)
             {
@@ -163,69 +163,74 @@ try
             }
             else
             {
-                if(!muteDiscordBot)
-                    await discordBot.Announce($"{modsToUpdate} Mods need an update. Restarting in 5 Minutes!");
-
+                await discordBot.Announce($"{modsToUpdate} Mods need an update. Restarting in 5 Minutes!");
                 Console.WriteLine($"{modsToUpdate} mods need to be updated! Restarting server in 5 minutes!");
-                await Task.Delay(1000 * 60 * 5);
 
+                await Task.Delay(TimeSpan.FromMinutes(5));
+
+                await discordBot.Announce($"Stopping server now...");
                 Console.WriteLine($"Stopping server now.");
-
-                if (!muteDiscordBot)
-                    await discordBot.Announce($"Stopping server now...");
 
                 dayZServerHelper.StopServer();
                 dayZServerHelper.StopRestartTimer();
-                await Task.Delay(20000);
+                await Task.Delay(TimeSpan.FromSeconds(20));
 
-                Console.WriteLine($"Copying updated mods to server directory...");
-                int updatedMods = await modCopyHelper.UpdateModsAsync();
-                Console.WriteLine($"Updated {updatedMods} mods!");
+                Console.WriteLine($"Syncing Workshop-Mod-Folder with Server-Mod-Folder...");
+                await modManager.SyncWorkshopWithServerModsAsync();
+
+                // Server is stopped, use that time for checking for DayZServer-Updates
+                Console.WriteLine($"Checking for DayZServer Updates...");
+                await steamApiWrapper.UpdateDayZServer();
 
                 Console.WriteLine($"Restarting server now.");
-                dayZServerHelper.StartServer(modCopyHelper.ModDestinationFolders);
+                dayZServerHelper.StartServer(modManager.ServerFolderModDirectoryNames);
                 dayZServerHelper.StartRestartTimer();
 
-                if (!muteDiscordBot)
-                    await discordBot.Announce($"Server started!");
+                await discordBot.Announce($"Server started! Next restart scheduled at " + 
+                    $"{(dayZServerHelper.TimeOfNextRestart.HasValue ? dayZServerHelper.TimeOfNextRestart.Value.ToLongTimeString() : String.Empty)}");
             }
         }
 
-        if (serverNeedsRestart)
+        if (restartTimerElapsed)
         {
-            serverNeedsRestart = false;
+            restartTimerElapsed = false;
 
-            //if (!muteDiscordBot)
-            //    await discordBot.Announce($"Server Restart-Timer Elapsed, restarting now.");
+            await discordBot.Announce($"Server Restart-Timer Elapsed, restarting now.");
 
             Console.WriteLine($"Stopping server now.");
             dayZServerHelper.StopServer();
             dayZServerHelper.StopRestartTimer();
-            await Task.Delay(20000);
+            await Task.Delay(TimeSpan.FromSeconds(20));
+
+            Console.WriteLine($"Checking for DayZServer Updates...");
+            await steamApiWrapper.UpdateDayZServer();
 
             Console.WriteLine($"Restarting server now.");
-            dayZServerHelper.StartServer(modCopyHelper.ModDestinationFolders);
+            dayZServerHelper.StartServer(modManager.ServerFolderModDirectoryNames);
             dayZServerHelper.StartRestartTimer();
 
-            if (!muteDiscordBot)
-                await discordBot.Announce($"Server started! Next restart scheduled: " +
+            await discordBot.Announce($"Server started! Next restart scheduled: " +
                 $"{(dayZServerHelper.TimeOfNextRestart.HasValue ? dayZServerHelper.TimeOfNextRestart.Value.ToLongTimeString() : String.Empty)}");
         }
 
         Console.WriteLine($"Next restart in {Math.Round(dayZServerHelper.TimeUntilNextRestart.Value.TotalMinutes, 2)} mins");
-        await Task.Delay(10000);
+        await Task.Delay(TimeSpan.FromSeconds(30));
 
-        if(!dayZServerHelper.IsRunning)
+        if(!dayZServerHelper.IsRunning && !restartTimerElapsed && !modCheckTimerElapsed)
         {
             Console.WriteLine($"Server crashed, restarting.");
             await discordBot.Announce($"Server crashed, restarting.");
+
             dayZServerHelper.StopServer();
             dayZServerHelper.StopRestartTimer();
+            await Task.Delay(TimeSpan.FromSeconds(20));
 
-            await Task.Delay(20000);
             Console.WriteLine($"Restarting server now.");
-            dayZServerHelper.StartServer(modCopyHelper.ModDestinationFolders);
+            dayZServerHelper.StartServer(modManager.ServerFolderModDirectoryNames);
             dayZServerHelper.StartRestartTimer();
+
+            await discordBot.Announce($"Server started! Next restart scheduled: " +
+               $"{(dayZServerHelper.TimeOfNextRestart.HasValue ? dayZServerHelper.TimeOfNextRestart.Value.ToLongTimeString() : String.Empty)}");
         }
     }
 }
@@ -238,22 +243,12 @@ catch(Exception ex)
 
 void DayZServerHelper_RestartTimerElapsed()
 {
-    serverNeedsRestart = true;
+    restartTimerElapsed = true;
     Console.WriteLine($"RestartTimer Elapsed!");
 }
 
 void ModUpdateTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
 {
-    checkForMods = true;
+    modCheckTimerElapsed = true;
     Console.WriteLine($"Checking for mod updates..");
-}
-
-async Task CheckForModsAndUpdate()
-{
-    int modsToUpdate = await modCopyHelper.DownloadModUpdatesViaSteamServerAsync();
-
-    if (modsToUpdate > 0)
-    {
-        int updatedMods = await modCopyHelper.UpdateModsAsync();
-    }
 }

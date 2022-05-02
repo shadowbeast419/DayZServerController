@@ -9,33 +9,27 @@ namespace DayZServerController
 {
     internal class DirectoryCopyWorker : IDisposable
     {
-        private string _sourceDir;
-        private string _destinationDir;
+        private DirectoryInfo _sourceDir;
+        private DirectoryInfo _destinationDir;
         private bool _copyingFinished = false;
         private RoboCommand _roboCmd;
 
-        public bool DirectoriesValid { get; } = false;
-
-
-        public DirectoryCopyWorker(string source, string destination)
+        public DirectoryCopyWorker(DirectoryInfo source, DirectoryInfo destination)
         {
-            if (String.IsNullOrEmpty(source) || !Directory.Exists(source))
-                throw new DirectoryNotFoundException($"Robocopy: Could not find source directory {source ?? "null"}!");
+            if (!source.Exists)
+                throw new DirectoryNotFoundException($"Robocopy: Could not find source directory {source.FullName}!");
 
-            if (String.IsNullOrEmpty(destination) || !Directory.Exists(destination))
-                throw new DirectoryNotFoundException($"Robocopy: Could not find destination directory {destination ?? "null"}");
+            if (!destination.Exists)
+                throw new DirectoryNotFoundException($"Robocopy: Could not find destination directory {destination.FullName}");
 
             _sourceDir = source;
             _destinationDir = destination;
-
-            DirectoriesValid = true;
-
             _roboCmd = new RoboCommand();
         }
 
         public async Task CopyDirectory()
         {
-            if (!DirectoriesValid)
+            if (!_sourceDir.Exists || !_destinationDir.Exists)
             {
                 Console.WriteLine($"Robocopy: WARNING: Directories invalid, no copying done.");
                 return;
@@ -45,8 +39,8 @@ namespace DayZServerController
             _roboCmd.OnCommandCompleted += RoboCmd_OnCommandCompleted;
 
             // copy options
-            _roboCmd.CopyOptions.Source = _sourceDir;
-            _roboCmd.CopyOptions.Destination = _destinationDir;
+            _roboCmd.CopyOptions.Source = _sourceDir.FullName;
+            _roboCmd.CopyOptions.Destination = _destinationDir.FullName;
             _roboCmd.CopyOptions.UseUnbufferedIo = true;
             _roboCmd.CopyOptions.Mirror = true;
 

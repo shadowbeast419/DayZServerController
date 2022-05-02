@@ -8,37 +8,38 @@ namespace DayZServerController
 {
     public class MultipleFileWatchers
     {
-        private List<string> _directoriesToWatch = new List<string>();
-        private List<string> _changedDirectories = new List<string>();
-        private Dictionary<string, List<FileInfo>> _fileInfoDictStart;
-        private Dictionary<string, List<FileInfo>> _fileInfoDictEnd;
+        private IEnumerable<DirectoryInfo> _directoriesToWatch;
+        private IList<DirectoryInfo> _changedDirectories;
+        private Dictionary<DirectoryInfo, List<FileInfo>> _fileInfoDictStart;
+        private Dictionary<DirectoryInfo, List<FileInfo>> _fileInfoDictEnd;
 
-        public MultipleFileWatchers(IEnumerable<string> directoriesToWatch)
+        public MultipleFileWatchers(IEnumerable<DirectoryInfo> directoriesToWatch)
         {
-            _directoriesToWatch = directoriesToWatch.Where(x => Directory.Exists(x)).ToList();
+            _directoriesToWatch = directoriesToWatch.Where(x => x.Exists);
+            _changedDirectories = new List<DirectoryInfo>();
 
-            _fileInfoDictStart = new Dictionary<string, List<FileInfo>>();
-            _fileInfoDictEnd = new Dictionary<string, List<FileInfo>>();
+            _fileInfoDictStart = new Dictionary<DirectoryInfo, List<FileInfo>>();
+            _fileInfoDictEnd = new Dictionary<DirectoryInfo, List<FileInfo>>();
         }
 
         public void StartWatching()
         {
             _fileInfoDictStart.Clear();
 
-            foreach (string dirToWatch in _directoriesToWatch)
+            foreach (DirectoryInfo dirToWatch in _directoriesToWatch)
             {
                 _fileInfoDictStart.Add(dirToWatch, GetFileInfoFromDirectory(dirToWatch));
             }
 
-            Console.WriteLine($"FileWatchers: Observing {_directoriesToWatch.Count} directories.");
+            Console.WriteLine($"FileWatchers: Observing {_directoriesToWatch.Count()} directories.");
         }
 
-        private static List<FileInfo> GetFileInfoFromDirectory(string directory)
+        private static List<FileInfo> GetFileInfoFromDirectory(DirectoryInfo directory)
         {
             List<FileInfo> fileInfos = new List<FileInfo>();
 
             // Watch the mod directory for updates
-            foreach (string file in Directory.EnumerateFiles(directory, "*.*", SearchOption.AllDirectories))
+            foreach (string file in Directory.EnumerateFiles(directory.FullName, "*.*", SearchOption.AllDirectories))
             {
                 Console.WriteLine(file);
 
@@ -64,13 +65,13 @@ namespace DayZServerController
             return fileInfos;
         }
 
-        private static bool CheckIfFileInfosAreEqual(List<FileInfo> startDir, List<FileInfo> endDir)
+        private static bool CheckIfFileInfosAreEqual(IEnumerable<FileInfo> startDir, IEnumerable<FileInfo> endDir)
         {
             // Check if the counts fit
-            if (startDir.Count != endDir.Count)
+            if (startDir.Count() != endDir.Count())
             {
                 Console.WriteLine($"Different count of files for mod detected. " +
-                    $"(Before: {startDir.Count}, After: {endDir.Count})");
+                    $"(Before: {startDir.Count()}, After: {endDir.Count()})");
 
                 return false;
             }
@@ -113,18 +114,18 @@ namespace DayZServerController
             return true;
         }
 
-        public List<string> EndWatching()
+        public IList<DirectoryInfo> EndWatching()
         {
             _fileInfoDictEnd.Clear();
             _changedDirectories.Clear();
 
-            foreach (string dirToWatch in _directoriesToWatch)
+            foreach (DirectoryInfo dirToWatch in _directoriesToWatch)
             {
                 _fileInfoDictEnd.Add(dirToWatch, GetFileInfoFromDirectory(dirToWatch));
             }
 
             // Compare the FileInfo from the start with the Info from the end
-            foreach(string dirToWatch in _directoriesToWatch)
+            foreach(DirectoryInfo dirToWatch in _directoriesToWatch)
             {
                 if(!CheckIfFileInfosAreEqual(_fileInfoDictStart[dirToWatch], _fileInfoDictEnd[dirToWatch]))
                 {
@@ -133,15 +134,18 @@ namespace DayZServerController
                 }
             }
 
-            Console.WriteLine($"FileWatcher: Ended watching {_directoriesToWatch.Count} directories.");
+            Console.WriteLine($"FileWatcher: Ended watching {_directoriesToWatch.Count()} directories.");
             Console.WriteLine($"Found {_changedDirectories.Count} Mods for update!");
 
-            _changedDirectories.ForEach(x => Console.WriteLine(x));
+            foreach (DirectoryInfo changedDir in _changedDirectories)
+            {
+                Console.WriteLine(changedDir.Name);
+            }
 
             return _changedDirectories;
         }
 
-        public static bool CheckIfDirectoryContentsAreEqual(string dir1, string dir2)
+        public static bool CheckIfDirectoryContentsAreEqual(DirectoryInfo dir1, DirectoryInfo dir2)
         {
             return CheckIfFileInfosAreEqual(GetFileInfoFromDirectory(dir1), GetFileInfoFromDirectory(dir2));
         }
