@@ -77,4 +77,4 @@ Future Plans:
 - Automatical Server Backups before each ModUpdate/Server Update
 ...
 
-Last but not least, some advertising for my server for the server owners like me who also like to play the game -> discord.io/AustrianDayZ
+Last but not least, some advertising for my server for the server owners like me who also like to play the game -> [AustrianDayZ Discord](https://discord.io/AustrianDayZ)
