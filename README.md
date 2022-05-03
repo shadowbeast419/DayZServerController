@@ -5,7 +5,7 @@ Disclaimer:
 I am already using this tool for my server (AustrianDayZ #1 Chernarus - Persistance ON - Expansion Mod - AI), there are some issues with ModUpdates but I don't know yet what the problem is. I suspect the SteamCMD. However, it runs stable!
 
 This tool is still in BETA, some configuration still have to take place inside the code and there are some bugs left. 
-Just send me a request if you need any assistance with my tool. Feel free to expand this tool as you like and feedback is always welcome!
+Just send me a request if you need any assistance with my tool. Feedback is always welcome!
 
 Features:
 - Checks periodically for updates of Mods and DayZ Server itself
