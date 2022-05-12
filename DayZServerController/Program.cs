@@ -10,8 +10,8 @@ using System.Diagnostics;
 
 // -------------- Checking CLI Arguments ---------------------------------------
 
-bool checkModsAtStartup = false;
-bool muteDiscordBot = true;
+bool checkModsAtStartup = true;
+bool muteDiscordBot = false;
 
 if (args.Length != Enum.GetNames(typeof(CLIArgumentsIndices)).Length)
 {
@@ -112,7 +112,7 @@ await steamApiWrapper.UpdateDayZServer();
 
 await modManager.SyncWorkshopWithServerModsAsync();
 
-if (!checkModsAtStartup)
+if (checkModsAtStartup)
 {
     Console.WriteLine($"Checking for Mod Updates...");
     int modsUpdated = await modManager.DownloadModUpdatesViaSteamAsync();
