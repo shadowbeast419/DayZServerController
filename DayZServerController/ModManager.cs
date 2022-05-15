@@ -8,17 +8,17 @@ namespace DayZServerController
 {
     internal class ModManager
     {
-        public readonly int DayZGameID = 221100;
+        public readonly int DayZGameId = 221100;
 
         private DirectoryInfo _workshopModFolder;
-        private DirectoryInfo _dayzServerFolder;
-        private Dictionary<long, string> _modListDict;
+        private DirectoryInfo? _dayzServerFolder;
+        private Dictionary<long, string>? _modListDict = new();
 
         // Stores the Workshop Mod Directories as keys and the DayZ-Server Mod Directories as values
         private Dictionary<DirectoryInfo, DirectoryInfo> _workshopServerModFolderDir;
         private ModlistReader _modlistReader;
-        private MultipleFileWatchers _modFileWatchers;
-        private SteamApiWrapper _steamApiWrapper;
+        private MultipleFileWatchers? _modFileWatchers;
+        private SteamCmdWrapper _steamCmdWrapper;
 
         /// <summary>
         /// Names of all Mod Folders in DayZ-Server Directory (from Modlist)
@@ -27,14 +27,11 @@ namespace DayZServerController
         {
             get
             {
-                if(_workshopServerModFolderDir == null)
-                    return Enumerable.Empty<string>();
-
                 return _workshopServerModFolderDir.Values.Select(x => x.Name);
             }
         }
 
-        public ModManager(DirectoryInfo workshopModFolder, FileInfo dayzServerExeInfo, ModlistReader modlistReader, SteamApiWrapper steamApiWrapper)
+        public ModManager(DirectoryInfo workshopModFolder, FileInfo dayzServerExeInfo, ModlistReader modlistReader, SteamCmdWrapper steamCmdWrapper)
         {
             if (!workshopModFolder.Exists)
             {
@@ -47,10 +44,13 @@ namespace DayZServerController
             }
 
             _workshopModFolder = workshopModFolder;
-            _dayzServerFolder = new DirectoryInfo(dayzServerExeInfo.DirectoryName);
+
+            if (dayzServerExeInfo.DirectoryName != null)
+                _dayzServerFolder = new DirectoryInfo(dayzServerExeInfo.DirectoryName);
+
             _modlistReader = modlistReader;
             _workshopServerModFolderDir = new Dictionary<DirectoryInfo, DirectoryInfo>();
-            _steamApiWrapper = steamApiWrapper;
+            _steamCmdWrapper = steamCmdWrapper;
         }
 
         /// <summary>
@@ -72,7 +72,9 @@ namespace DayZServerController
             foreach (var modKeyValuePair in _modListDict)
             {
                 // Is the mod missing?
-                if (!allModDirectories.Contains(modKeyValuePair.Key.ToString()))
+                var modDirectories = allModDirectories.ToList();
+
+                if (!modDirectories.Contains(modKeyValuePair.Key.ToString()))
                 {
                     Console.WriteLine($"WARNING: Mod {modKeyValuePair.Value} with ID {modKeyValuePair.Key} missing in Mod-Directory!");
                 }
@@ -95,19 +97,27 @@ namespace DayZServerController
             // Watch the Workshop Mod Directories for changes
             _modFileWatchers = new MultipleFileWatchers(_workshopServerModFolderDir.Keys);
 
-            // Start observering all necessary mod folders
+            // Start observing all necessary mod folders
             _modFileWatchers.StartWatching();
-            _steamApiWrapper.ResetUpdateTaskList();
 
-            foreach (var modKeyValuePair in _modListDict)
+            if (_steamCmdWrapper.SteamCmdMode == SteamCmdModeEnum.SteamCmdExe)
             {
-                Console.WriteLine($"Adding task for checking for updates of Mod {modKeyValuePair.Value}...");
-                 _steamApiWrapper.AddUpdateWorkshopItemTask(DayZGameID.ToString(), modKeyValuePair.Key.ToString());
+                _steamCmdWrapper.ResetUpdateTaskList();
+
+                foreach (var modKeyValuePair in _modListDict)
+                {
+                    Console.WriteLine($"Adding task for checking for updates of Mod {modKeyValuePair.Value}...");
+                    _steamCmdWrapper.AddUpdateWorkshopItemTask(DayZGameId.ToString(), modKeyValuePair.Key.ToString());
+                }
+
+                Console.WriteLine($"Executing steamCMD-process with {_steamCmdWrapper.ModUpdateTasksCount} ModUpdate-Tasks...");
             }
 
-            Console.WriteLine($"Executing steamCMD-process with {_steamApiWrapper.ModUpdateTasksCount} ModUpdate-Tasks...");
-            int taskNo = await _steamApiWrapper.ExecuteSteamCMDWithArguments();
-            Console.WriteLine($"Closed SteamAPI-process {taskNo}.");
+            if (_steamCmdWrapper.SteamCmdMode != SteamCmdModeEnum.Disabled)
+            {
+                bool success = await _steamCmdWrapper.ExecuteSteamCmdUpdate();
+                Console.WriteLine($"Closed SteamAPI-process. Success: {success}.");
+            }
 
             IList<DirectoryInfo> changedModList = _modFileWatchers.EndWatching();
             List<DirectoryInfo> _modsToCopy = new List<DirectoryInfo>();
@@ -126,10 +136,12 @@ namespace DayZServerController
         /// <summary>
         /// Syncs Mod Folder contents locally. 
         /// </summary>
-        /// <param name="sourceDestFolderMap"></param>
+        /// <param></param>
         /// <returns></returns>
-        public async Task SyncWorkshopWithServerModsAsync()
+        public async Task<int> SyncWorkshopWithServerModsAsync()
         {
+            int modsChanged = 0;
+
             foreach (var sourceDestTuple in _workshopServerModFolderDir)
             {
                 if (!MultipleFileWatchers.CheckIfDirectoryContentsAreEqual(sourceDestTuple.Key, sourceDestTuple.Value))
@@ -142,8 +154,12 @@ namespace DayZServerController
                     {
                         await copyWorker.CopyDirectory();
                     }
+
+                    modsChanged++;
                 }
             }
+
+            return modsChanged;
         }
     }
 }

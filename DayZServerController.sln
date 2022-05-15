@@ -5,7 +5,7 @@ VisualStudioVersion = 17.0.32126.317
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DayZServerController", "DayZServerController\DayZServerController.csproj", "{F8492B5A-948C-4E4C-BF12-E33F12F23CC6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DayZServerControllerUnitTests", "DayZServerControllerUnitTests\DayZServerControllerUnitTests.csproj", "{53116612-DE25-4B93-8324-33EAAFCD7BC8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DayZServerControllerUnitTests", "DayZServerControllerUnitTests\DayZServerControllerUnitTests.csproj", "{53116612-DE25-4B93-8324-33EAAFCD7BC8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

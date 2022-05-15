@@ -2,7 +2,7 @@
   "profiles": {
     "DayZServerController": {
       "commandName": "Project",
-      "commandLineArgs": "\"C:\\Users\\tacticalbacon\\Documents\\steamcmd\\steamcmd.exe\" \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\DayZServer\\Modlist.txt\" \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\DayZServer\\DayZServer_x64.exe\" 14400 \"C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\221100\""
+      "commandLineArgs": "\"C:\\Users\\tacticalbacon\\Documents\\steamcmd\\steamcmd.exe\" \"C:\\Users\\tacticalbacon\\Documents\\discord.key\" \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\DayZServer\\Modlist.txt\" \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\DayZServer\\DayZServer_x64.exe\" \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\DayZ\" 14400 \"C:\\Program Files (x86)\\Steam\\steamapps\\workshop\\content\\221100\""
     }
   }
 }

@@ -22,9 +22,9 @@ namespace DayZServerController
         /// Gets the IDs and Trivial ModNames from the Modlist
         /// </summary>
         /// <returns></returns>
-        public async Task<Dictionary<long, string>> GetModsFromFile()
+        public async Task<Dictionary<long, string>?> GetModsFromFile()
         {
-            Dictionary<long, string> modDict = new Dictionary<long, string>();
+            Dictionary<long, string>? modDict = new Dictionary<long, string>();
 
             using(StreamReader sr = new StreamReader(_modlistInfo.FullName))
             {

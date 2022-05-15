@@ -2,47 +2,47 @@
 using DayZServerController;
 using System.Diagnostics;
 
-// Argument1: SteamApiPath
-// Argument2: ModlistPath
-// Argument3: Path to DayZServer-Executable
-// Argument4: Restart Period in s
-// Argument5: DayZ-Mods Folder
-
 // -------------- Checking CLI Arguments ---------------------------------------
 
 bool checkModsAtStartup = true;
 bool muteDiscordBot = false;
 
-if (args.Length != Enum.GetNames(typeof(CLIArgumentsIndices)).Length)
+// If set to false, a native Steam Client has to do the updates
+bool useSteamCmdForUpdates = false;
+
+if (args.Length != Enum.GetNames(typeof(CliArgumentIndices)).Length)
 {
     Console.WriteLine($"Invalid number of CLI-Arguments. Is: {args.Length}, " +
-        $"Should: {Enum.GetNames(typeof(CLIArgumentsIndices)).Length}. Exiting application...");
+        $"Should: {Enum.GetNames(typeof(CliArgumentIndices)).Length}. Exiting application...");
     Console.ReadLine();
 
     return 1;
 }
 
-SteamApiWrapper steamApiWrapper;
+SteamCmdWrapper steamApiWrapper;
 ModManager modManager;
 DayZServerHelper dayZServerHelper;
-DiscordBot discordBot = new DiscordBot()
+DiscordBot discordBot =
+    new DiscordBot(new DiscordBotData(new FileInfo(args[(int)CliArgumentIndices.DiscordFilePath])))
 {
     Mute = muteDiscordBot
 };
 
 try
 {
-    steamApiWrapper = new SteamApiWrapper(new FileInfo(args[(int)CLIArgumentsIndices.SteamApiPath]));
+    steamApiWrapper = useSteamCmdForUpdates ? 
+        new SteamCmdWrapper(SteamCmdModeEnum.SteamCmdExe,new FileInfo(args[(int)CliArgumentIndices.SteamCmdPath])) : 
+        new SteamCmdWrapper();
 
-    modManager = new ModManager(new DirectoryInfo(args[(int)CLIArgumentsIndices.WorkshopFolder]), 
-        new FileInfo(args[(int)CLIArgumentsIndices.DayZServerExecPath]),
-        new ModlistReader(new FileInfo(args[(int)CLIArgumentsIndices.ModlistPath])),
+    modManager = new ModManager(new DirectoryInfo(args[(int)CliArgumentIndices.WorkshopFolder]),
+        new FileInfo(args[(int)CliArgumentIndices.DayZServerExecPath]),
+        new ModlistReader(new FileInfo(args[(int)CliArgumentIndices.ModlistPath])),
         steamApiWrapper);
 
-    dayZServerHelper = new DayZServerHelper(args[(int)CLIArgumentsIndices.DayZServerExecPath], 
-        args[(int)CLIArgumentsIndices.RestartPeriod]);
+    dayZServerHelper = new DayZServerHelper(args[(int)CliArgumentIndices.DayZServerExecPath],
+        args[(int)CliArgumentIndices.RestartPeriod]);
 }
-catch(ArgumentException ex)
+catch (ArgumentException ex)
 {
     Console.WriteLine(ex.Message);
     Console.ReadLine();
@@ -129,7 +129,7 @@ if (checkModsAtStartup)
 // Start restart timer and server
 dayZServerHelper.StartServer(modManager.ServerFolderModDirectoryNames);
 
-dayZServerHelper.RestartTimerElapsed += DayZServerHelper_RestartTimerElapsed;
+dayZServerHelper.RestartTimerElapsed += DayZServerHelperRestartTimerElapsed;
 dayZServerHelper.StartRestartTimer();
 
 await discordBot.Announce($"Server started! Next restart scheduled at " +
@@ -144,7 +144,7 @@ System.Timers.Timer modUpdateTimer = new System.Timers.Timer()
     AutoReset = true
 };
 
-modUpdateTimer.Elapsed += ModUpdateTimer_Elapsed;
+modUpdateTimer.Elapsed += ModUpdateTimerElapsed;
 modUpdateTimer.Start();
 
 try
@@ -241,13 +241,13 @@ catch(Exception ex)
     return 1;
 }
 
-void DayZServerHelper_RestartTimerElapsed()
+void DayZServerHelperRestartTimerElapsed()
 {
     restartTimerElapsed = true;
     Console.WriteLine($"RestartTimer Elapsed!");
 }
 
-void ModUpdateTimer_Elapsed(object? sender, System.Timers.ElapsedEventArgs e)
+void ModUpdateTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
 {
     modCheckTimerElapsed = true;
     Console.WriteLine($"Checking for mod updates..");

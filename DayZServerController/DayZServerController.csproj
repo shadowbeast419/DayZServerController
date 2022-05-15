@@ -13,6 +13,8 @@
     <PackageReference Include="NUnit" Version="3.13.3" />
     <PackageReference Include="NUnit3TestAdapter" Version="4.2.1" />
     <PackageReference Include="RoboSharp" Version="1.2.5" />
+    <PackageReference Include="SteamWebAPI2" Version="4.3.2" />
+    <PackageReference Include="System.Management.Automation" Version="7.2.3" />
     <PackageReference Include="System.Security.Permissions" Version="6.0.0" />
   </ItemGroup>
 
