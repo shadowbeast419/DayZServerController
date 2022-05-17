@@ -41,8 +41,6 @@ namespace DayZServerController
             // Watch the mod directory for updates
             foreach (string file in Directory.EnumerateFiles(directory.FullName, "*.*", SearchOption.AllDirectories))
             {
-                Console.WriteLine(file);
-
                 // Create the FileInfo object only when needed to ensure
                 // the information is as current as possible.
                 FileInfo fi = null;
@@ -65,13 +63,13 @@ namespace DayZServerController
             return fileInfos;
         }
 
-        private static bool CheckIfFileInfosAreEqual(IEnumerable<FileInfo> startDir, IEnumerable<FileInfo> endDir)
+        private static bool CheckIfFileInfosAreEqual(IList<FileInfo> startDir, IList<FileInfo> endDir)
         {
             // Check if the counts fit
-            if (startDir.Count() != endDir.Count())
+            if (startDir.Count != endDir.Count)
             {
                 Console.WriteLine($"Different count of files for mod detected. " +
-                    $"(Before: {startDir.Count()}, After: {endDir.Count()})");
+                    $"(Before: {startDir.Count}, After: {endDir.Count})");
 
                 return false;
             }

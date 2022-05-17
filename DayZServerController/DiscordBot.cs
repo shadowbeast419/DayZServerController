@@ -11,17 +11,18 @@ namespace DayZServerController
 {
     internal class DiscordBot
     {
-        private DiscordSocketClient _client;
-        private DiscordBotData _botData;
+        private DiscordSocketClient? _client;
+        private DiscordBotData? _botData;
         private bool _isInit;
 
         public bool Mute { get; set; } = false;
 
-        public DiscordBot(DiscordBotData botData)
+        public DiscordBot(DiscordBotData? botData)
         {
-            if (!botData.IsDataValid)
+            if (botData is not { IsDataValid: true })
                 return;
 
+            _botData = botData;
             _client = new DiscordSocketClient();
             _isInit = true;
         }

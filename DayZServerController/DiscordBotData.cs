@@ -9,7 +9,7 @@ namespace DayZServerController
     public class DiscordBotData
     {
         public string? Token { get; } = String.Empty;
-        public ulong ChannelId { get; } = 0;
+        public ulong ChannelId { get; }
         public bool IsDataValid { get; } = true;
 
         public DiscordBotData(FileInfo discordSecretFile)
@@ -25,14 +25,14 @@ namespace DayZServerController
                 using (StreamReader sr =
                        new StreamReader(discordSecretFile.FullName))
                 {
-                    if (!ulong.TryParse(sr.ReadLine(), out var channelId) || ChannelId == 0)
+                    Token = sr.ReadLine();
+
+                    if (!ulong.TryParse(sr.ReadLine(), out var channelId))
                     {
-                        throw new IOException($"Discord channel ID not valid. ({channelId})");
+                        throw new IOException($"Discord channel ID not valid.");
                     }
 
                     ChannelId = channelId;
-
-                    Token = sr.ReadLine();
 
                     if (String.IsNullOrEmpty(Token))
                         throw new IOException(

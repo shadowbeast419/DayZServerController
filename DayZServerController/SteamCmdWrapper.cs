@@ -98,7 +98,7 @@ namespace DayZServerController
 
         public async Task UpdateDayZServer()
         {
-            if (!_isInitialized || SteamCmdMode == SteamCmdModeEnum.Disabled)
+            if (!_isInitialized)
                 return;
 
             switch (SteamCmdMode)
@@ -120,6 +120,9 @@ namespace DayZServerController
                     await _powerShell.InvokeAsync();
 
                     break;
+
+                case SteamCmdModeEnum.Disabled:
+                    return;
             }
         }
 
