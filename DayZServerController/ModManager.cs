@@ -31,6 +31,20 @@ namespace DayZServerController
             }
         }
 
+        public bool ModUpdateAvailable
+        {
+            get
+            {
+                foreach (var sourceDestTuple in _workshopServerModFolderDir)
+                {
+                    if (!MultipleFileWatchers.CheckIfDirectoryContentsAreEqual(sourceDestTuple.Key, sourceDestTuple.Value))
+                        return true;
+                }
+
+                return false;
+            }
+        }
+
         public ModManager(DirectoryInfo workshopModFolder, FileInfo dayzServerExeInfo, ModlistReader modlistReader, SteamCmdWrapper steamCmdWrapper)
         {
             if (!workshopModFolder.Exists)

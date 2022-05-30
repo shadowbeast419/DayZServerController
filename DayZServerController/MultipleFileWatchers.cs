@@ -38,6 +38,12 @@ namespace DayZServerController
         {
             List<FileInfo> fileInfos = new List<FileInfo>();
 
+            if (!directory.Exists)
+            {
+                Console.WriteLine($"FileWatchers: Directory {directory.Name} does not exist. Creating new directory.");
+                Directory.CreateDirectory(directory.FullName);
+            }
+
             // Watch the mod directory for updates
             foreach (string file in Directory.EnumerateFiles(directory.FullName, "*.*", SearchOption.AllDirectories))
             {
