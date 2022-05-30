@@ -25,33 +25,33 @@ namespace DayZServerControllerUnitTests
             _createdRandomDirs = new List<string>();
         }
 
-        [Test]
-        public void CheckIfChangesGetNoticed()
-        {
-            List<string> directoriesToWatch = CreateDirectories(_baseTestDirectory).ToList();
-            _createdRandomDirs.AddRange(directoriesToWatch);
+        //[Test]
+        //public void CheckIfChangesGetNoticed()
+        //{
+        //    List<string> directoriesToWatch = CreateDirectories(_baseTestDirectory).ToList();
+        //    _createdRandomDirs.AddRange(directoriesToWatch);
 
-            _fileWatchers = new MultipleFileWatchers(directoriesToWatch);
-            _fileWatchers.StartWatching();
+        //    _fileWatchers = new MultipleFileWatchers(directoriesToWatch);
+        //    _fileWatchers.StartWatching();
 
-            for(int i = 0; i < directoriesToWatch.Count; i++)
-            {
-                // Add files to every third directory
-                if(i % 3 == 0)
-                    AddRandomFilesToDirectory(directoriesToWatch[i]);
-            }
+        //    for(int i = 0; i < directoriesToWatch.Count; i++)
+        //    {
+        //        // Add files to every third directory
+        //        if(i % 3 == 0)
+        //            AddRandomFilesToDirectory(directoriesToWatch[i]);
+        //    }
 
-            List<string> changedDirectories = _fileWatchers.EndWatching();
+        //    List<string> changedDirectories = _fileWatchers.EndWatching();
 
-            for (int i = 0; i < directoriesToWatch.Count; i++)
-            {
-                // Check if every third directory has changed according to the FileWatchers
-                if(i % 3 == 0)
-                {
-                    Assert.IsTrue(changedDirectories.Contains(directoriesToWatch[i]));
-                }
-            }
-        }
+        //    for (int i = 0; i < directoriesToWatch.Count; i++)
+        //    {
+        //        // Check if every third directory has changed according to the FileWatchers
+        //        if(i % 3 == 0)
+        //        {
+        //            Assert.IsTrue(changedDirectories.Contains(directoriesToWatch[i]));
+        //        }
+        //    }
+        //}
 
         [OneTimeTearDown]
         public void OneTimeTearDown()

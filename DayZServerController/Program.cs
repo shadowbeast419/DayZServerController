@@ -26,11 +26,12 @@ DiscordBot discordBot =
     Mute = muteDiscordBot
 };
 
+await discordBot.Init();
+
 Logging logger = new Logging(discordBot)
 {
     MuteDiscordBot = muteDiscordBot
 };
-
 
 try
 {
@@ -48,7 +49,7 @@ try
 }
 catch (ArgumentException ex)
 {
-    Console.WriteLine(ex.Message);
+    await logger.WriteLineAsync(ex.Message, false);
     Console.ReadLine();
     return 1;
 }
@@ -59,7 +60,7 @@ catch (ArgumentException ex)
 if (!steamApiWrapper.Init())
 {
     // No credentials stored
-    Console.WriteLine("No steam credentials found. Please enter them now:");
+    await logger.WriteLineAsync("No steam credentials found. Please enter them now:", false);
     Console.Write("Username: ");
 
     string? steamUsername = Console.ReadLine();
@@ -70,7 +71,7 @@ if (!steamApiWrapper.Init())
 
     if(String.IsNullOrEmpty(steamUsername) || String.IsNullOrEmpty(steamPassword))
     {
-        Console.WriteLine("Credentials are no valid strings. Exiting application...");
+        await logger.WriteLineAsync("Credentials are no valid strings. Exiting application...", false);
         Console.ReadLine();
         return 1;
     }
@@ -78,17 +79,15 @@ if (!steamApiWrapper.Init())
     // Init with new credentials
     if(!steamApiWrapper.Init(steamUsername, steamPassword))
     {
-        Console.WriteLine("Could not store new steam credentials. Exiting application...");
+        await logger.WriteLineAsync("Could not store new steam credentials. Exiting application...", false);
         Console.ReadLine();
         return 1;
     }
 }
 
-await discordBot.Init();
-
 if (dayZServerHelper.IsRunning)
 {
-    Console.Write("Server is already running: Do you want to restart the process? (y/n)");
+    await logger.WriteLineAsync("Server is already running: Do you want to restart the process? (y/n)", false);
     
     ConsoleKeyInfo pressedKey = Console.ReadKey();
     bool stopServer = pressedKey.Key == ConsoleKey.Y;
@@ -101,7 +100,7 @@ if (dayZServerHelper.IsRunning)
     }
     else
     {
-        Console.WriteLine("Application will now exit...");
+        await logger.WriteLineAsync("Application will now exit...", false);
         Console.ReadLine();
         return 1;
     }
@@ -189,16 +188,16 @@ try
             restartTimerElapsed = false;
 
             await logger.WriteLineAsync("Server Restart-Timer Elapsed, restarting now.");
+            await logger.WriteLineAsync($"Stopping server now.", false);
 
-            Console.WriteLine($"Stopping server now.");
             dayZServerHelper.StopServer();
             dayZServerHelper.StopRestartTimer();
             await Task.Delay(TimeSpan.FromSeconds(20));
 
-            await logger.WriteLineAsync($"Checking for DayZServer Updates...", false);
+            // await logger.WriteLineAsync($"Checking for DayZServer Updates...", false);
             // await steamApiWrapper.UpdateDayZServer();
 
-            Console.WriteLine($"Restarting server now.");
+            await logger.WriteLineAsync($"Restarting server now.", false);
             dayZServerHelper.StartServer(modManager.ServerFolderModDirectoryNames);
             dayZServerHelper.StartRestartTimer();
 
@@ -231,19 +230,21 @@ try
 }
 catch(Exception ex)
 {
-    Console.WriteLine(ex.Message);
+    await logger.WriteLineAsync(ex.Message, false);
+    await logger.WriteLineAsync("DayZ Controller crashed... :(");
+
     Console.ReadLine();
     return 1;
 }
 
-void DayZServerHelperRestartTimerElapsed()
+async void DayZServerHelperRestartTimerElapsed()
 {
     restartTimerElapsed = true;
-    Console.WriteLine($"RestartTimer Elapsed!");
+    await logger.WriteLineAsync($"RestartTimer Elapsed!", false);
 }
 
-void ModUpdateTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
+async void ModUpdateTimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)
 {
     modCheckTimerElapsed = true;
-    Console.WriteLine($"Checking for mod updates..");
+    await logger.WriteLineAsync($"Checking for mod updates..", false);
 }
